@@ -258,7 +258,8 @@ class City :
                 q.append(self.currentState)
                 self.qSet.add(self.currentState[1])
             if (lResult != -1) :
-                self.currentState = copy.deepcopy(self.currentStateCopy)
+                path = self.currentState[2]
+                # self.currentState = copy.deepcopy(self.currentStateCopy)
                 
             if (self.getNumOfPatients() == 0 or len(q) == 0) : 
                 reachEnd = True
@@ -272,7 +273,7 @@ city3 = City(l3)
 
 print("calculating BFS solution ...")
 start = time.time()
-path = city3.bfsSolution()
+path = city2.bfsSolution()
 end = time.time()
 print("path: " , path)
 print("path length: ", len(path))
