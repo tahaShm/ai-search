@@ -30,7 +30,7 @@ class City :
         self.bfsList = []
         self.currentState = self.getInitialState(table) #[0] state of a, p , and h.     [1] hash.       [2] path
         self.currentStateCopy = copy.deepcopy(self.currentState)
-        self.q = []
+        self.qSet = set()
     def getTableNodes(self, table) :
         nodes = []
         for i in range(0, len(table)):
@@ -75,6 +75,8 @@ class City :
     def getInitialState(self, table) : 
         currentState = []
         currentState0 = []
+        x = 0
+        y = 0
         for i in range(0, len(table)):
             for j in range(0, len (table[i])): 
                 if (table[i][j] == 'P'):
@@ -84,12 +86,15 @@ class City :
                     currentState0.append(Obj(i, j, 'h', capacity))
                 elif (table[i][j] == 'A') : 
                     currentState0.append(Obj(i, j, 'a'))
+                    x = i
+                    y = j
         currentHash = self.getHash(currentState0)
         currentPath = '' 
         currentState.append(currentState0)
         currentState.append(currentHash)
         currentState.append(currentPath)
-        print("currentHash: ", currentHash)        
+        currentState.append(x)
+        currentState.append(y)        
         return currentState
     def getNumOfPatients(self) :
         ans = 0
@@ -158,12 +163,33 @@ class City :
         newObj = Obj(newX, newY, 'p')
         self.currentState[0].append(newObj)
         return
-                
+     
+    def checkLock(self,x, y, direction) : 
+        ans = 0
+        if (self.table[x][y+1].type == 'b') : 
+            ans += 1
+        if (self.table[x+1][y].type == 'b') : 
+            ans += 1
+        if (self.table[x][y-1].type == 'b') : 
+            ans += 1
+        if (self.table[x-1][y].type == 'b') : 
+            ans += 1
+        if (ans < 2):
+            return False
+        elif (ans >= 2) : 
+            if (self.table[x][y+1].type == 'b' and direction == 'u') : 
+                return True
+            if (self.table[x+1][y].type == 'b' and direction == 'r') : 
+                return True
+            if (self.table[x][y-1].type == 'b' and direction == 'd') : 
+                return True
+            if (self.table[x-1][y].type == 'b' and direction == 'l') : 
+                return True
+            else:
+                return False            
     def checkDirectionAndState(self, x, y, direction):
         [newX,newY] = self.getNewXY(x, y, direction)
-        # print("aaaa : ", newX, newY)
         if (self.table[newX][newY].type == 'b') : 
-            # print("here1")
             return -1
         currentObj = self.getCurrentObj(newX, newY)
         if (currentObj == 's' or currentObj.type == 'h') :
@@ -171,39 +197,26 @@ class City :
         elif (currentObj.type == 'p') :
             [newNewX, newNewY] = self.getNewXY(newX, newY, direction)
             if (self.table[newNewX][newNewY].type == 'b') : 
-                # print("here2")
                 return -1
             currentObj = self.getCurrentObj(newNewX, newNewY)
             if (currentObj != 's' and currentObj.type == 'p') :
-                # print("here3")
+                return -1
+            elif (currentObj == 's' and self.checkLock(newNewX, newNewY, direction)) : 
+                return -1
+            elif (currentObj != 's' and currentObj.type == 'h' and currentObj.capacity <= 0 and self.checkLock(newNewX, newNewY, direction)) : 
                 return -1
             self.setNewAmbulance(x, y, newX, newY)
             self.setNewPatient(newNewX, newNewY)
         self.currentState[1] = self.getHash(self.currentState[0])
         self.currentState[2] = self.currentState[2] + self.getNewDir(direction)
-        # print("here here : ", self.currentState[1])
+        self.currentState[3] = newX
+        self.currentState[4] = newY
         return 1
         
     def isRepetitiveState(self) : 
-        cnt = 0
-        for i in self.q :
-            cnt += 1
-            if i[1] == self.currentState[1] : 
-                return True
-        return False
-    def getCopy(self) : 
-        currentState = []
-        currentState0 = []
-        for i in range(0, len(table)):
-            for j in range(0, len (table[i])): 
-                if (table[i][j] == 'P'):
-                    currentState0.append(Obj(i, j, 'p'))
-                elif (table[i][j] == '0' or table[i][j] == '1' or table[i][j] == '2' or table[i][j] == '3') : 
-                    capacity = int(table[i][j])
-                    currentState0.append(Obj(i, j, 'h', capacity))
-                elif (table[i][j] == 'A') : 
-                    currentState0.append(Obj(i, j, 'a'))
+        return (self.currentState[1] in self.qSet)
     def bfsSolution(self) :
+        q = []
         start = True
         counter = 0
         reachEnd = False
@@ -212,41 +225,44 @@ class City :
             if (start) : 
                 start = False
             else :
-                self.currentState = self.q[0]
-                self.currentStateCopy = self.getCopy()
-                self.q.pop(0)
-            print("hash : " ,self.currentState[1])
-            print("path : " ,self.currentState[2])
-            print("len : ", len(self.currentState[2]))
-            print()
-            [x, y] = self.currentAmbulanceCoord()
-            
+                self.currentState = q[0]
+                self.currentStateCopy = copy.deepcopy(self.currentState)
+                q.pop(0)
+                self.qSet.remove(self.currentState[1])
+            path = self.currentState[2]
+            [x, y] = [self.currentState[3], self.currentState[4]]
             
             uResult = self.checkDirectionAndState(x, y, 'u')
             if (uResult == 1 and self.isRepetitiveState() == False) : 
-                self.q.append(self.currentState)
-            self.currentState = copy.deepcopy(self.currentStateCopy)
+                q.append(self.currentState)
+                self.qSet.add(self.currentState[1])
+            if (uResult != -1) :
+                self.currentState = copy.deepcopy(self.currentStateCopy)
             
             rResult = self.checkDirectionAndState(x, y, 'r')
             if (rResult == 1 and self.isRepetitiveState() == False) : 
-                self.q.append(self.currentState)
-            self.currentState = copy.deepcopy(self.currentStateCopy)
+                q.append(self.currentState)
+                self.qSet.add(self.currentState[1])
+            if (rResult != -1) :
+                self.currentState = copy.deepcopy(self.currentStateCopy)
             
             dResult = self.checkDirectionAndState(x, y, 'd')
             if (dResult == 1 and self.isRepetitiveState() == False) : 
-                self.q.append(self.currentState)
-            self.currentState = copy.deepcopy(self.currentStateCopy)
+                q.append(self.currentState)
+                self.qSet.add(self.currentState[1])
+            if (dResult != -1) :
+                self.currentState = copy.deepcopy(self.currentStateCopy)
                 
             lResult = self.checkDirectionAndState(x, y, 'l')
             if (lResult == 1 and self.isRepetitiveState() == False) : 
-                self.q.append(self.currentState)
-            self.currentState = copy.deepcopy(self.currentStateCopy)
-            
-            print("len(q): ", len(self.q))
-            print()
-            if (self.getNumOfPatients() == 0 or len(self.q) == 0) : 
-                print("len(q): ", len(self.q))
+                q.append(self.currentState)
+                self.qSet.add(self.currentState[1])
+            if (lResult != -1) :
+                self.currentState = copy.deepcopy(self.currentStateCopy)
+                
+            if (self.getNumOfPatients() == 0 or len(q) == 0) : 
                 reachEnd = True
+                return path
                 
 
         
@@ -254,8 +270,11 @@ city1 = City(l1)
 city2 = City(l2)
 city3 = City(l3)
 
+print("calculating BFS solution ...")
 start = time.time()
-city2.bfsSolution()
-
+path = city3.bfsSolution()
 end = time.time()
+print("path: " , path)
+print("path length: ", len(path))
+
 print(end - start)
