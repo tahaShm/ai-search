@@ -213,8 +213,8 @@ class City :
         self.currentState[4] = newY
         return 1
         
-    def isRepetitiveState(self) : 
-        return (self.currentState[1] in self.qSet)
+    def isRepetitiveState(self, length = '') : 
+        return ((self.currentState[1] + str(length)) in self.qSet)
     def bfsSolution(self) :
         q = []
         start = True
@@ -226,32 +226,36 @@ class City :
                 start = False
             else :
                 self.currentState = q[0]
-                self.currentStateCopy = copy.deepcopy(self.currentState)
+                self.currentStateCopy = self.getCopy(self.currentState)
                 q.pop(0)
                 self.qSet.remove(self.currentState[1])
             path = self.currentState[2]
             [x, y] = [self.currentState[3], self.currentState[4]]
+            
+            if (self.getNumOfPatients() == 0 or (len(q) == 0 and counter > 1)) : 
+                reachEnd = True
+                return path
             
             uResult = self.checkDirectionAndState(x, y, 'u')
             if (uResult == 1 and self.isRepetitiveState() == False) : 
                 q.append(self.currentState)
                 self.qSet.add(self.currentState[1])
             if (uResult != -1) :
-                self.currentState = copy.deepcopy(self.currentStateCopy)
+                self.currentState = self.getCopy(self.currentStateCopy)
             
             rResult = self.checkDirectionAndState(x, y, 'r')
             if (rResult == 1 and self.isRepetitiveState() == False) : 
                 q.append(self.currentState)
                 self.qSet.add(self.currentState[1])
             if (rResult != -1) :
-                self.currentState = copy.deepcopy(self.currentStateCopy)
+                self.currentState = self.getCopy(self.currentStateCopy)
             
             dResult = self.checkDirectionAndState(x, y, 'd')
             if (dResult == 1 and self.isRepetitiveState() == False) : 
                 q.append(self.currentState)
                 self.qSet.add(self.currentState[1])
             if (dResult != -1) :
-                self.currentState = copy.deepcopy(self.currentStateCopy)
+                self.currentState = self.getCopy(self.currentStateCopy)
                 
             lResult = self.checkDirectionAndState(x, y, 'l')
             if (lResult == 1 and self.isRepetitiveState() == False) : 
@@ -261,21 +265,122 @@ class City :
                 path = self.currentState[2]
                 # self.currentState = copy.deepcopy(self.currentStateCopy)
                 
-            if (self.getNumOfPatients() == 0 or len(q) == 0) : 
-                reachEnd = True
-                return path
-                
-
+            
+    def getCopy(self, state) : 
+        copy = []
+        state0 = []
+        for i in state[0] :
+            obj = Obj(i.x, i.y, i.type, i.capacity)
+            state0.append(obj)
+        state1 = state[1]
+        state2 = state[2]
+        state3 = state[3]
+        state4 = state[4]
+        copy.append(state0)
+        copy.append(state1)
+        copy.append(state2)
+        copy.append(state3)
+        copy.append(state4)
+        return copy 
+    def dls(self, state, depth, path) :
+        self.currentState = self.getCopy(state)
+        # print("states : ", len(self.qSet))
+        # print("hash : ", self.currentState[1])
+        # print("path : ", path)
+        # print("path : ", len(path))
+        # print("patients: ", self.getNumOfPatients())
+        # print()
+        pathLength = len(path)
+        if (self.getNumOfPatients() == 0) :
+            return path
         
-city1 = City(l1)
-city2 = City(l2)
-city3 = City(l3)
+        if (depth <= 0) : 
+            return False
+        [x, y] = [self.currentState[3], self.currentState[4]]
+        
+        uResult = self.checkDirectionAndState(x, y, 'u')
+        if (uResult == 1 and self.isRepetitiveState(pathLength) == False) : 
+            res = self.dls(self.currentState, depth - 1, path + self.getNewDir('u'))
+            if (res != False) : 
+                return res
+            self.qSet.add(self.currentState[1] + str(pathLength))
+        if (uResult != -1) :
+            self.currentState = self.getCopy(state)
+        
+        rResult = self.checkDirectionAndState(x, y, 'r')
+        if (rResult == 1 and self.isRepetitiveState(pathLength) == False) :
+            res = self.dls(self.currentState, depth - 1, path + self.getNewDir('r'))
+            if (res != False) : 
+                return res
+            self.qSet.add(self.currentState[1] + str(pathLength))
+        if (rResult != -1) :
+            self.currentState = self.getCopy(state)
+        
+        dResult = self.checkDirectionAndState(x, y, 'd')
+        if (dResult == 1 and self.isRepetitiveState(pathLength) == False) : 
+            res = self.dls(self.currentState, depth - 1, path + self.getNewDir('d'))
+            if (res != False) : 
+                return res
+            self.qSet.add(self.currentState[1] + str(pathLength))
+        if (dResult != -1) :
+            self.currentState = self.getCopy(state)
+            
+        lResult = self.checkDirectionAndState(x, y, 'l')
+        if (lResult == 1 and self.isRepetitiveState(pathLength) == False) : 
+            res = self.dls(self.currentState, depth - 1, path + self.getNewDir('l'))
+            if (res != False) : 
+                return res
+            self.qSet.add(self.currentState[1] + str(pathLength))
+        if (lResult != -1) :
+            self.currentState = self.getCopy(state)
+            
+        return False
+    def idsSolution (self) : 
+        counter = 0
+        for i in range(0, 100):    
+            temp = len(self.qSet)
+            counter += temp
+            print("current states : ", temp)
+            print("total states : ", counter)
+            print()
+            print("iteration : ", i)
+            self.qSet.clear()
+            currentDls = self.dls(self.currentState, i, '')
+            if currentDls != False :
+                temp = len(self.qSet)
+                counter += temp
+                print("current states : ", temp)
+                print("total states : ", counter)
+                print()
+                return currentDls
+        return "no path"
+                
+def bfs() :    
+    city1 = City(l1)
+    city2 = City(l2)
+    city3 = City(l3)
 
-print("calculating BFS solution ...")
-start = time.time()
-path = city2.bfsSolution()
-end = time.time()
-print("path: " , path)
-print("path length: ", len(path))
+    print("calculating BFS solution ...")
+    start = time.time()
+    path = city1.bfsSolution()
+    end = time.time()
+    print("path: " , path)
+    print("path length: ", len(path))
 
-print(end - start)
+    print("time : ", end - start)
+    
+def ids() :    
+    city1 = City(l1)
+    city2 = City(l2)
+    city3 = City(l3)
+
+    print("calculating IDS solution ...")
+    start = time.time()
+    path = city3.idsSolution()
+    end = time.time()
+    print("path: " , path)
+    print("path length: ", len(path))
+    
+    print("time: ", end - start)
+bfs()    
+# ids()
