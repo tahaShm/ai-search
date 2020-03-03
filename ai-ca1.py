@@ -10,8 +10,11 @@ def readFile(fileName) :
 l1 = readFile("test1.txt")
 l2 = readFile("test2.txt")
 l3 = readFile("test3.txt")
+
+
 def sortSecond(val): 
     return val[1]
+
 class Node :
     def __init__(self, nodeType) :
         self.type = nodeType #types -> b: block, s: space
@@ -23,6 +26,8 @@ class Obj:
         self.type = nodeType
         self.realType = nodeType
         self.capacity = capacity
+    def __lt__(self, other):
+        return False
 
 class City :
     def __init__(self, table) :
@@ -81,7 +86,7 @@ class City :
             for j in range(0, len (table[i])): 
                 if (table[i][j] == 'P'):
                     currentState0.append(Obj(i, j, 'p'))
-                elif (table[i][j] == '0' or table[i][j] == '1' or table[i][j] == '2' or table[i][j] == '3') : 
+                elif (table[i][j] == '0' or table[i][j] == '1' or table[i][j] == '2' or table[i][j] == '3' or table[i][j] == '4' or table[i][j] == '5') : 
                     capacity = int(table[i][j])
                     currentState0.append(Obj(i, j, 'h', capacity))
                 elif (table[i][j] == 'A') : 
@@ -228,13 +233,17 @@ class City :
                 self.currentState = q[0]
                 self.currentStateCopy = self.getCopy(self.currentState)
                 q.pop(0)
-                self.qSet.remove(self.currentState[1])
+                # self.qSet.remove(self.currentState[1])
             path = self.currentState[2]
+            # print("path: ", path)
+            # print("patients: ", self.getNumOfPatients())
+            # print()
             [x, y] = [self.currentState[3], self.currentState[4]]
             
             if (self.getNumOfPatients() == 0 or (len(q) == 0 and counter > 1)) : 
                 reachEnd = True
                 return path
+            
             
             uResult = self.checkDirectionAndState(x, y, 'u')
             if (uResult == 1 and self.isRepetitiveState() == False) : 
@@ -284,12 +293,6 @@ class City :
         return copy 
     def dls(self, state, depth, path) :
         self.currentState = self.getCopy(state)
-        # print("states : ", len(self.qSet))
-        # print("hash : ", self.currentState[1])
-        # print("path : ", path)
-        # print("path : ", len(path))
-        # print("patients: ", self.getNumOfPatients())
-        # print()
         pathLength = len(path)
         if (self.getNumOfPatients() == 0) :
             return path
@@ -340,20 +343,140 @@ class City :
         for i in range(0, 100):    
             temp = len(self.qSet)
             counter += temp
-            print("current states : ", temp)
-            print("total states : ", counter)
-            print()
-            print("iteration : ", i)
             self.qSet.clear()
             currentDls = self.dls(self.currentState, i, '')
             if currentDls != False :
                 temp = len(self.qSet)
                 counter += temp
-                print("current states : ", temp)
                 print("total states : ", counter)
                 print()
                 return currentDls
         return "no path"
+    
+    def heuristic1Func(self) : 
+        hN = 0
+        currentHash = '' 
+        currentP = []
+        currentH = []
+        currentA = []
+        currentType = 'p'
+        disAP = 0
+        disPH = 0
+        for i in self.currentState[0]: 
+            if (i.type == 'p') :
+                currentP.append([i.x, i.y])
+            if (i.realType == 'h') :
+                currentH.append([i.x, i.y])
+            if (i.type == 'a') :
+                currentA = [i.x, i.y]
+        for i in currentP : 
+            newDisAP = abs(currentA[0] - i[0]) + abs(currentA[1] - i[1])
+            if (newDisAP < disAP or disAP == 0) : 
+                disAP = newDisAP
+            disPH = 0
+            for j in currentH : 
+                newDisPH = abs(j[0] - i[0]) + abs(j[1] - i[1])
+                if ((newDisPH < disPH or disPH == 0) and (newDisPH > 0)) : 
+                    disPH = newDisPH
+            hN += disPH
+        hN += disAP
+        hN += len(self.currentState[2])
+        return hN
+    
+    def heuristic2Func(self) : 
+        hN = 0
+        currentHash = '' 
+        currentP = []
+        currentA = []
+        currentType = 'p'
+        disAP = 0
+        disPH = 0
+        for i in self.currentState[0]: 
+            if (i.type == 'p') :
+                currentP.append([i.x, i.y])
+            if (i.type == 'a') :
+                currentA = [i.x, i.y]
+        for i in currentP : 
+            newDisAP = abs(currentA[0] - i[0]) + abs(currentA[1] - i[1])
+            if (newDisAP < disAP or disAP == 0) : 
+                disAP = newDisAP
+        hN += disAP + len(currentP)
+        hN += len(self.currentState[2])
+        return hN 
+    
+    def getCurrentHN(self, hid) :
+        if (hid == 1) : 
+            return self.heuristic1Func()
+        elif (hid == 2) : 
+            return self.heuristic2Func() 
+            # return 0
+            
+    def heuristicSolutuion(self, hid) :
+        q = []
+        start = True
+        counter = 0
+        reachEnd = False
+        while (reachEnd == False) :
+            counter += 1
+            if (start) : 
+                start = False
+            else :
+                index = 0
+                counter = 0
+                hn = 100000000
+                for i in q :
+                    if (i[0] < hn) :
+                        index = counter
+                        hn = i[0]
+                    counter += 1
+                self.currentState = q[index][1]
+                self.currentStateCopy = self.getCopy(self.currentState)
+                q.pop(index)
+            path = self.currentState[2]
+            [x, y] = [self.currentState[3], self.currentState[4]]
+            
+            if (self.getNumOfPatients() == 0 or (len(q) == 0 and counter > 1)) : 
+                reachEnd = True
+                return path
+            
+            uResult = self.checkDirectionAndState(x, y, 'u')
+            if (uResult == 1 and self.isRepetitiveState() == False) : 
+                hN = self.getCurrentHN(hid)
+                q.append([hN, self.currentState])
+                self.qSet.add(self.currentState[1])
+            
+            if (uResult != -1) :
+                self.currentState = self.getCopy(self.currentStateCopy)
+
+            
+            rResult = self.checkDirectionAndState(x, y, 'r')
+            if (rResult == 1 and self.isRepetitiveState() == False) : 
+                hN = self.getCurrentHN(hid)
+                q.append([hN, self.currentState])
+                self.qSet.add(self.currentState[1])
+
+            if (rResult != -1) :
+                self.currentState = self.getCopy(self.currentStateCopy)
+
+            
+            dResult = self.checkDirectionAndState(x, y, 'd')
+            if (dResult == 1 and self.isRepetitiveState() == False) : 
+                hN = self.getCurrentHN(hid)
+                q.append([hN, self.currentState])
+                self.qSet.add(self.currentState[1])
+
+            if (dResult != -1) :
+                self.currentState = self.getCopy(self.currentStateCopy)
+          
+                
+            lResult = self.checkDirectionAndState(x, y, 'l')
+            if (lResult == 1 and self.isRepetitiveState() == False) : 
+                hN = self.getCurrentHN(hid)
+                q.append([hN, self.currentState])
+                self.qSet.add(self.currentState[1])
+            
+            if (lResult != -1) :
+                path = self.currentState[2]
                 
 def bfs() :    
     city1 = City(l1)
@@ -362,7 +485,7 @@ def bfs() :
 
     print("calculating BFS solution ...")
     start = time.time()
-    path = city1.bfsSolution()
+    path = city3.bfsSolution()
     end = time.time()
     print("path: " , path)
     print("path length: ", len(path))
@@ -382,5 +505,21 @@ def ids() :
     print("path length: ", len(path))
     
     print("time: ", end - start)
-bfs()    
+    
+def heuristic(hid) :    
+    city1 = City(l1)
+    city2 = City(l2)
+    city3 = City(l3)
+
+    print("calculating heuristic solution ...")
+    start = time.time()
+    path = city1.heuristicSolutuion(hid)
+    end = time.time()
+    print("path: " , path)
+    print("path length: ", len(path))
+    
+    print("time: ", end - start)
+    
+# bfs()    
 # ids()
+heuristic(2)
