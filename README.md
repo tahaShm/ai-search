@@ -5,4 +5,4 @@ Uninformed searchs:
 - IDS(iterative deepening search) 
 
 Informed seaches:
-- Two heuristic ways working with
+- Two heuristic ways
